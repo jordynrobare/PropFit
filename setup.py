@@ -20,8 +20,8 @@ setuptools.setup(
     ],
     python_requires='>=3.10',
     install_requires=['chemparse', 'numpy', 'rdkit', 'statsmodels', 'pubchempy', 'pandas', 
-                      'random', 'matplotlib.pyplot', 'AqOrg', 'pyCHNOSZ'],
-    package_data={'': ['*.r']},
+                      'matplotlib.pyplot', 'AqOrg', 'pyCHNOSZ'],
+    package_data={'': ['default databases/*.csv']},
     include_package_data=True,
     zip_safe=False
 )
