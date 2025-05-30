@@ -90,7 +90,8 @@ class PropFit(Estimate):
         elif order == 2 or order == '2':
             group_df = pd.read_csv(pkg_resources.resource_stream(__name__, 'default databases/2nd order groups.csv'))
         group_df.replace(np.nan, '', inplace=True)
-    
+        self.group_df = group_df
+
         keys = list(group_df['keys'])
         values = list(group_df['values'])
         pattern_dict = dict(zip(keys, values))
@@ -280,13 +281,7 @@ class PropFit(Estimate):
         for g in gas_props:
             gas_cols += [g, g+'_err', g+'_n']
 
-        if order == 'custom':
-            group_df = pd.read_csv('custom groups.csv')
-        if order == 1 or order == '1':
-            group_df = pd.read_csv('1st order groups.csv')
-        if order == 2 or order == '2':
-            group_df = pd.read_csv('2nd order groups.csv')
-        group_df.replace(np.nan, '', inplace=True)
+        group_df = self.group_df
     
         keys = list(group_df['keys'])
         values = list(group_df['values'])
@@ -366,7 +361,7 @@ class PropFit(Estimate):
         for i in gas.index:
             elements = gas.loc[i, 'elem']
             if str(elements) not in ['nan', '']:
-                Selem = entropy(elements)
+                Selem = entropy(elements)*4.184
                 Sig = gas.loc[i, 'Sig']
                 dS = Sig - Selem
                 gas.loc[i, 'Gig'] = round((gas.loc[i, 'Hig']*1000 - 298.15*dS)/1000, 3)
