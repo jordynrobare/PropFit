@@ -7,5 +7,5 @@ Estimate group contribution values of thermodynamic properties of organic molecu
 Install `PropFit` with pip:
 
 ```
-$ pip install PropFit
+$ pip install propfit
 ```
