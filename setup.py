@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="propfit",
-    version="1.0.2",
+    version="1.1.3",
     author="Jordyn Robare",
     author_email="jrobare@asu.edu",
     description="Python test package.",

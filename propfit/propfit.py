@@ -11,8 +11,7 @@ from rdkit.Chem.Draw import rdMolDraw2D
 import statsmodels.api as sm # for multilinear regression
 from AqOrg import *
 from pyCHNOSZ import *
-import pkg_resources
- ## pd.read_csv(pkg_resources.resource_stream(__name__, 'data/element.csv'), index_col="element")
+from WORMutils import import_package_file
 
 class PropFit(Estimate):
     
@@ -34,8 +33,9 @@ class PropFit(Estimate):
             self.input_df = pd.read_csv(filename)
 
         else:
-            self.input_df = pd.read_csv(pkg_resources.resource_stream(__name__, 'default databases/default database.csv'))
-
+            with import_package_file(__name__, 'default databases/default database.csv', as_file=True) as path:
+                self.input_df = pd.read_csv(path)
+                
         if isinstance(group_file, str):
             self.group_df = pd.read_csv(group_file)
         else:
@@ -62,6 +62,7 @@ class PropFit(Estimate):
             Name of the CSV file that will be generated. 
         """
         input_df = self.input_df
+        smile_df = input_df.copy()
         if output_name == None:
             output_name = 'properties and groups.csv'
         else:
@@ -86,9 +87,12 @@ class PropFit(Estimate):
         if isinstance(self.group_df, pd.DataFrame):
             group_df = self.group_df
         elif order == 1 or order == '1':
-            group_df = pd.read_csv(pkg_resources.resource_stream(__name__, 'default databases/1st order groups.csv'))
+            with import_package_file(__name__, 'default databases/1st order groups.csv', as_file=True) as path:
+                group_df = pd.read_csv(path)
         elif order == 2 or order == '2':
-            group_df = pd.read_csv(pkg_resources.resource_stream(__name__, 'default databases/2nd order groups.csv'))
+            with import_package_file(__name__, 'default databases/2nd order groups.csv', as_file=True) as path:
+                group_df = pd.read_csv(path)
+        
         group_df.replace(np.nan, '', inplace=True)
         self.group_df = group_df
 
@@ -110,12 +114,14 @@ class PropFit(Estimate):
         for molecule in molecules:
             if molecule not in vetted_mol:
                 self.name = molecule
-                # print(molecule)
 
-                self.pcp_compound = pcp.get_compounds(self.name, "name")
-                self.smiles = self.pcp_compound[0].canonical_smiles
-                self.formula = self.pcp_compound[0].molecular_formula
-
+                temp_smile_df = smile_df.loc[smile_df['compound']==molecule].loc[~smile_df['SMILES'].isnull()].copy()
+                if len(smile_df)>0:
+                    self.smiles = temp_smile_df['SMILES'].values[0]
+                else:
+                    self.pcp_compound = pcp.get_compounds(self.name, "name")
+                    self.smiles = self.pcp_compound[0].connectivity_smiles
+                
                 self.get_mol_smiles_formula_formula_dict()
                 temp_dict = self.match_groups()
                 values = list(temp_dict.values())
