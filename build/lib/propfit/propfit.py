@@ -11,7 +11,7 @@ from rdkit.Chem.Draw import rdMolDraw2D
 import statsmodels.api as sm # for multilinear regression
 from AqOrg import *
 from pyCHNOSZ import *
-from WORMutils import import_package_file
+from WORMutils import import_package_file, Error_Handler
 
 class PropFit(Estimate):
     
@@ -43,6 +43,7 @@ class PropFit(Estimate):
                     
         self.props = props
         self.smiles = None
+        self.err_handler = Error_Handler(clean=False)
         
     def dataprep(self, average=True, order=2, output_name = None):
     
@@ -116,7 +117,7 @@ class PropFit(Estimate):
                 self.name = molecule
 
                 temp_smile_df = smile_df.loc[smile_df['compound']==molecule].loc[~smile_df['SMILES'].isnull()].copy()
-                if len(smile_df)>0:
+                if len(temp_smile_df)>0:
                     self.smiles = temp_smile_df['SMILES'].values[0]
                 else:
                     self.pcp_compound = pcp.get_compounds(self.name, "name")

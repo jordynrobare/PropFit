@@ -85,6 +85,7 @@ el.replaceWith(d);
                     
         self.props = props
         self.smiles = None
+        self.err_handler = Error_Handler(clean=False)
         
     def dataprep(self, average=True, order=2, output_name = None):
     
@@ -158,7 +159,7 @@ el.replaceWith(d);
                 self.name = molecule
 
                 temp_smile_df = smile_df.loc[smile_df[&#39;compound&#39;]==molecule].loc[~smile_df[&#39;SMILES&#39;].isnull()].copy()
-                if len(smile_df)&gt;0:
+                if len(temp_smile_df)&gt;0:
                     self.smiles = temp_smile_df[&#39;SMILES&#39;].values[0]
                 else:
                     self.pcp_compound = pcp.get_compounds(self.name, &#34;name&#34;)
@@ -700,7 +701,7 @@ el.replaceWith(d);
             self.name = molecule
 
             temp_smile_df = smile_df.loc[smile_df[&#39;compound&#39;]==molecule].loc[~smile_df[&#39;SMILES&#39;].isnull()].copy()
-            if len(smile_df)&gt;0:
+            if len(temp_smile_df)&gt;0:
                 self.smiles = temp_smile_df[&#39;SMILES&#39;].values[0]
             else:
                 self.pcp_compound = pcp.get_compounds(self.name, &#34;name&#34;)
