@@ -410,6 +410,7 @@ el.replaceWith(d);
         for i in gas.index:
             elements = gas.loc[i, &#39;elem&#39;]
             if str(elements) not in [&#39;nan&#39;, &#39;&#39;]:
+                reset(messages=False)
                 Selem = entropy(elements)*4.184
                 Sig = gas.loc[i, &#39;Sig&#39;]
                 dS = Sig - Selem
@@ -617,7 +618,7 @@ el.replaceWith(d);
 </dl></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li>AqOrg.AqOrg.Estimate</li>
+<li>aqorg.AqOrg.Estimate</li>
 </ul>
 <h3>Methods</h3>
 <dl>
@@ -868,6 +869,7 @@ If 'custom', you must provide a group matching csv named 'custom groups.csv'.</d
     for i in gas.index:
         elements = gas.loc[i, &#39;elem&#39;]
         if str(elements) not in [&#39;nan&#39;, &#39;&#39;]:
+            reset(messages=False)
             Selem = entropy(elements)*4.184
             Sig = gas.loc[i, &#39;Sig&#39;]
             dS = Sig - Selem
