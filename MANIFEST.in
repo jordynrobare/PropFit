@@ -7,7 +7,7 @@ include CITATION.cff
 include propfit tutorial.ipynb
 
 # Include HTML documentation
-recursive-include html *.html *.css *.js *.md
+recursive-include html *.html *.css *.js
 
 # Include data files
 recursive-include propfit/default\ databases *.csv

@@ -59,6 +59,15 @@ coverage.xml
 # But keep the tutorial notebook
 !propfit tutorial.ipynb
 
+# Development files at root level
+/*.xlsx
+/*.xls
+/*.csv
+
+# Documentation files (except README.md)
+*.md
+!README.md
+
 # IPython
 profile_default/
 ipython_config.py
