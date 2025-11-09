@@ -1,9 +1,0 @@
-chemparse
-numpy
-rdkit
-statsmodels
-pubchempy
-pandas
-matplotlib
-AqOrg
-pyCHNOSZ
