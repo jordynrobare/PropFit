@@ -369,7 +369,7 @@ class PropFit(Estimate):
             elements = gas.loc[i, 'elem']
             if str(elements) not in ['nan', '']:
                 reset(messages=False)
-                Selem = entropy(elements)*4.184
+                Selem = entropy(elements)
                 Sig = gas.loc[i, 'Sig']
                 dS = Sig - Selem
                 gas.loc[i, 'Gig'] = round((gas.loc[i, 'Hig']*1000 - 298.15*dS)/1000, 3)
