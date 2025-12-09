@@ -9,9 +9,9 @@ import random
 from rdkit.Chem import rdDepictor, Draw
 from rdkit.Chem.Draw import rdMolDraw2D
 import statsmodels.api as sm # for multilinear regression
-from AqOrg import *
-from pyCHNOSZ import *
-from WORMutils import import_package_file, Error_Handler
+from aqorg import *
+from pychnosz import reset, entropy
+from wormutils import import_package_file, Error_Handler
 
 class PropFit(Estimate):
     
@@ -368,7 +368,8 @@ class PropFit(Estimate):
         for i in gas.index:
             elements = gas.loc[i, 'elem']
             if str(elements) not in ['nan', '']:
-                Selem = entropy(elements)*4.184
+                reset(messages=False)
+                Selem = entropy(elements)
                 Sig = gas.loc[i, 'Sig']
                 dS = Sig - Selem
                 gas.loc[i, 'Gig'] = round((gas.loc[i, 'Hig']*1000 - 298.15*dS)/1000, 3)
