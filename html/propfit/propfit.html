@@ -411,7 +411,7 @@ el.replaceWith(d);
             elements = gas.loc[i, &#39;elem&#39;]
             if str(elements) not in [&#39;nan&#39;, &#39;&#39;]:
                 reset(messages=False)
-                Selem = entropy(elements)*4.184
+                Selem = entropy(elements)
                 Sig = gas.loc[i, &#39;Sig&#39;]
                 dS = Sig - Selem
                 gas.loc[i, &#39;Gig&#39;] = round((gas.loc[i, &#39;Hig&#39;]*1000 - 298.15*dS)/1000, 3)
@@ -870,7 +870,7 @@ If 'custom', you must provide a group matching csv named 'custom groups.csv'.</d
         elements = gas.loc[i, &#39;elem&#39;]
         if str(elements) not in [&#39;nan&#39;, &#39;&#39;]:
             reset(messages=False)
-            Selem = entropy(elements)*4.184
+            Selem = entropy(elements)
             Sig = gas.loc[i, &#39;Sig&#39;]
             dS = Sig - Selem
             gas.loc[i, &#39;Gig&#39;] = round((gas.loc[i, &#39;Hig&#39;]*1000 - 298.15*dS)/1000, 3)
