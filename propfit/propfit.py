@@ -257,7 +257,7 @@ class PropFit(Estimate):
             df_group_property.to_csv(save_as+"_"+dependent_param+"_group_property.csv", index=False) #reports 0s when not able to estimate
             df_group_se.to_csv(save_as+"_"+dependent_param+"_group_se.csv", index=False)
 
-    def generate(self, filename = 'properties and groups regressed', order=2, hyd_props = ['Gh','Hh','Cph','V'], gas_props = ['Hig','Sig','Cpig'], aq_props = ['Gaq','Haq','Cpaq']):
+    def generate(self, filename = 'properties and groups regressed', order=2, hyd_props = ['Gh','Hh','Cph','V'], gas_props = ['Hig','Sig','Cpig'], aq_props = ['Gaq','Haq','Cpaq','V']):
         
         """
         Generate the group thermodynamic property databases needed to put into AqOrg's Estimate() function.
@@ -294,9 +294,6 @@ class PropFit(Estimate):
             gas_cols += [g, g+'_err', g+'_n']
 
         aq_cols = []
-        if 'V' in aq_props and 'V' in hyd_props:
-            aq_props.remove('V')
-            print('V of hydration and formation in the aqueous state are equivalent. Only reporting once')
         for a in aq_props:
             aq_cols += [a, a+'_err', a+'_n']
             
