@@ -24,7 +24,10 @@ class PropFit(Estimate):
         Name of csv with compound names and thermodynamic properties you want to regress.
 
     props : list of strings
-        Thermodynamic properties you want to regress group data for. Must match the property columns in the input file. 
+        Thermodynamic properties you want to regress group data for. Must match the property columns in the input file.
+
+    group_file : optional
+        Custom file containing group information for matching.
     """
     
     def __init__(self, filename=None, props=['Gh','Hh','Cph','V','Hig','Sig','Cpig','Gaq','Haq','Saq','Cpaq','Vaq'], group_file=None): 
@@ -44,6 +47,7 @@ class PropFit(Estimate):
         self.props = props
         self.smiles = None
         self.err_handler = Error_Handler(clean=False)
+        self.assign_groups_to_atoms = {} # variable from aqorg's Estimate() that needs to be instantiated as an empty dict
         
     def dataprep(self, average=True, order=2, output_name = None):
     
