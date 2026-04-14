@@ -16,11 +16,11 @@ authors:
     family-names: Shock
     given-names: Everett
     orcid: "https://orcid.org/0000-0002-4283-0163"
-cff-version: "1.1.5"
+cff-version: "1.1.6"
 license: MIT
 message: "If you use this software, please cite it using these metadata."
 repository-code: "https://github.com/jordynrobare/PropFit"
 title: "PropFit : Python package for regressing group contribution values from thermodynamic data of organic molecules."
-version: "1.1.5"
-date-released: 2026-01-06
+version: "1.1.6"
+date-released: 2026-04-14
 ...

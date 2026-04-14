@@ -48,7 +48,7 @@ el.replaceWith(d);
 <dl>
 <dt id="propfit.propfit.PropFit"><code class="flex name class">
 <span>class <span class="ident">PropFit</span></span>
-<span>(</span><span>filename=None,<br>props=['Gh', 'Hh', 'Cph', 'V', 'Hig', 'Sig', 'Cpig'],<br>group_file=None)</span>
+<span>(</span><span>filename=None,<br>props=['Gh', 'Hh', 'Cph', 'V', 'Hig', 'Sig', 'Cpig', 'Gaq', 'Haq', 'Saq', 'Cpaq', 'Vaq'],<br>group_file=None)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -66,10 +66,13 @@ el.replaceWith(d);
         Name of csv with compound names and thermodynamic properties you want to regress.
 
     props : list of strings
-        Thermodynamic properties you want to regress group data for. Must match the property columns in the input file. 
+        Thermodynamic properties you want to regress group data for. Must match the property columns in the input file.
+
+    group_file : optional
+        Custom file containing group information for matching.
     &#34;&#34;&#34;
     
-    def __init__(self, filename=None, props=[&#39;Gh&#39;,&#39;Hh&#39;,&#39;Cph&#39;,&#39;V&#39;,&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;], group_file=None): 
+    def __init__(self, filename=None, props=[&#39;Gh&#39;,&#39;Hh&#39;,&#39;Cph&#39;,&#39;V&#39;,&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;,&#39;Gaq&#39;,&#39;Haq&#39;,&#39;Saq&#39;,&#39;Cpaq&#39;,&#39;Vaq&#39;], group_file=None): 
 
         if isinstance(filename, str):
             self.input_df = pd.read_csv(filename)
@@ -86,6 +89,7 @@ el.replaceWith(d);
         self.props = props
         self.smiles = None
         self.err_handler = Error_Handler(clean=False)
+        self.assign_groups_to_atoms = {} # variable from aqorg&#39;s Estimate() that needs to be instantiated as an empty dict
         
     def dataprep(self, average=True, order=2, output_name = None):
     
@@ -299,7 +303,7 @@ el.replaceWith(d);
             df_group_property.to_csv(save_as+&#34;_&#34;+dependent_param+&#34;_group_property.csv&#34;, index=False) #reports 0s when not able to estimate
             df_group_se.to_csv(save_as+&#34;_&#34;+dependent_param+&#34;_group_se.csv&#34;, index=False)
 
-    def generate(self, filename = &#39;properties and groups regressed&#39;, order=2, hyd_props = [&#39;Gh&#39;,&#39;Hh&#39;,&#39;Cph&#39;,&#39;V&#39;], gas_props = [&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;]):
+    def generate(self, filename = &#39;properties and groups regressed&#39;, order=2, hyd_props = [&#39;Gh&#39;,&#39;Hh&#39;,&#39;Cph&#39;,&#39;V&#39;], gas_props = [&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;], aq_props = [&#39;Gaq&#39;,&#39;Haq&#39;,&#39;Cpaq&#39;,&#39;V&#39;]):
         
         &#34;&#34;&#34;
         Generate the group thermodynamic property databases needed to put into AqOrg&#39;s Estimate() function.
@@ -320,8 +324,13 @@ el.replaceWith(d);
         gas_props : list of strings, default [&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;]
             Thermodynamic properties of formation of ideal gases you want to regress group data for. Must match the property columns in the input file.
 
+        aq_props : list of strings, default [&#39;Gaq&#39;,&#39;Haq&#39;,&#39;Cpaq&#39;]
+            Thermodynamic properties of hydration you want to regress group data for. Must match the property columns in the input file. 
+            
         &#34;&#34;&#34;
+        
         save_as = filename
+        
         hyd_cols = []
         for h in hyd_props:
             hyd_cols += [h, h+&#39;_err&#39;, h+&#39;_n&#39;]
@@ -330,6 +339,10 @@ el.replaceWith(d);
         for g in gas_props:
             gas_cols += [g, g+&#39;_err&#39;, g+&#39;_n&#39;]
 
+        aq_cols = []
+        for a in aq_props:
+            aq_cols += [a, a+&#39;_err&#39;, a+&#39;_n&#39;]
+            
         group_df = self.group_df
     
         keys = list(group_df[&#39;keys&#39;])
@@ -425,8 +438,43 @@ el.replaceWith(d);
         hyd.loc[hyd_ind, &#39;group&#39;]=&#39;Yo&#39;
         hyd.loc[hyd_ind, &#39;smarts&#39;]=&#39;Yo&#39;
 
+        aq = pd.DataFrame(columns = [&#39;group&#39;]+aq_cols+[&#39;smarts&#39;,&#39;elem&#39;])
+        temp_df = pd.read_csv(save_as+&#39;_&#39;+aq_props[0]+&#39;_group_property.csv&#39;)
+        for i in temp_df.index:
+            group = temp_df.loc[i, &#39;group&#39;]
+            aq.loc[i, &#39;group&#39;] = group
+            aq.loc[i, &#39;smarts&#39;] = group
+            if group != &#39;material point&#39;:
+                aq.loc[i, &#39;elem&#39;] = self.pattern_dict[group]
+    
+        remove = []
+        for p in aq_props:
+            prop_df = pd.read_csv(save_as+&#39;_&#39;+p+&#39;_group_property.csv&#39;)
+            err_df = pd.read_csv(save_as+&#39;_&#39;+p+&#39;_group_se.csv&#39;)
+            for i in prop_df.index:
+                group = prop_df.loc[i, &#39;group&#39;]
+                value = prop_df.loc[i, &#39;value&#39;]
+                if err_df.loc[i, &#39;group&#39;] != group:
+                    print(&#39;err&#39;)
+                if value == 0 and i not in remove:
+                    remove.append(i)
+                if value != 0:
+                    err = err_df.loc[i, &#39;std err&#39;]
+                    cnt = 0
+                    if group != &#39;material point&#39;:
+                        cnt = group_df.loc[group_df[group]&gt;0][p].count()                        
+                    aq.loc[i, p] = value
+                    aq.loc[i, p+&#39;_err&#39;] = err
+                    aq.loc[i, p+&#39;_n&#39;] = cnt
+        aq.drop(remove, inplace=True)
+
+        aq_ind = aq.loc[aq[&#39;group&#39;]==&#39;material point&#39;].index[0]
+        aq.loc[aq_ind, &#39;group&#39;]=&#39;Yo&#39;
+        aq.loc[aq_ind, &#39;smarts&#39;]=&#39;Yo&#39;
+
         gas.to_csv(&#39;gas props.csv&#39;, index=False)
         hyd.to_csv(&#39;hyd props.csv&#39;, index=False)
+        aq.to_csv(&#39;aq props.csv&#39;, index=False)
         
     def tts(self, repeats = 100, test_size = 0.2, filename = None, output_name = &#39;stats df.csv&#39;, show=True):
 
@@ -615,6 +663,8 @@ el.replaceWith(d);
 <dd>Name of csv with compound names and thermodynamic properties you want to regress.</dd>
 <dt><strong><code>props</code></strong> :&ensp;<code>list</code> of <code>strings</code></dt>
 <dd>Thermodynamic properties you want to regress group data for. Must match the property columns in the input file.</dd>
+<dt><strong><code>group_file</code></strong> :&ensp;<code>optional</code></dt>
+<dd>Custom file containing group information for matching.</dd>
 </dl></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
@@ -751,14 +801,14 @@ If 'custom', you must provide a group matching csv named 'custom groups.csv'.</d
 </dl></div>
 </dd>
 <dt id="propfit.propfit.PropFit.generate"><code class="name flex">
-<span>def <span class="ident">generate</span></span>(<span>self,<br>filename='properties and groups regressed',<br>order=2,<br>hyd_props=['Gh', 'Hh', 'Cph', 'V'],<br>gas_props=['Hig', 'Sig', 'Cpig'])</span>
+<span>def <span class="ident">generate</span></span>(<span>self,<br>filename='properties and groups regressed',<br>order=2,<br>hyd_props=['Gh', 'Hh', 'Cph', 'V'],<br>gas_props=['Hig', 'Sig', 'Cpig'],<br>aq_props=['Gaq', 'Haq', 'Cpaq', 'V'])</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def generate(self, filename = &#39;properties and groups regressed&#39;, order=2, hyd_props = [&#39;Gh&#39;,&#39;Hh&#39;,&#39;Cph&#39;,&#39;V&#39;], gas_props = [&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;]):
+<pre><code class="python">def generate(self, filename = &#39;properties and groups regressed&#39;, order=2, hyd_props = [&#39;Gh&#39;,&#39;Hh&#39;,&#39;Cph&#39;,&#39;V&#39;], gas_props = [&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;], aq_props = [&#39;Gaq&#39;,&#39;Haq&#39;,&#39;Cpaq&#39;,&#39;V&#39;]):
     
     &#34;&#34;&#34;
     Generate the group thermodynamic property databases needed to put into AqOrg&#39;s Estimate() function.
@@ -779,8 +829,13 @@ If 'custom', you must provide a group matching csv named 'custom groups.csv'.</d
     gas_props : list of strings, default [&#39;Hig&#39;,&#39;Sig&#39;,&#39;Cpig&#39;]
         Thermodynamic properties of formation of ideal gases you want to regress group data for. Must match the property columns in the input file.
 
+    aq_props : list of strings, default [&#39;Gaq&#39;,&#39;Haq&#39;,&#39;Cpaq&#39;]
+        Thermodynamic properties of hydration you want to regress group data for. Must match the property columns in the input file. 
+        
     &#34;&#34;&#34;
+    
     save_as = filename
+    
     hyd_cols = []
     for h in hyd_props:
         hyd_cols += [h, h+&#39;_err&#39;, h+&#39;_n&#39;]
@@ -789,6 +844,10 @@ If 'custom', you must provide a group matching csv named 'custom groups.csv'.</d
     for g in gas_props:
         gas_cols += [g, g+&#39;_err&#39;, g+&#39;_n&#39;]
 
+    aq_cols = []
+    for a in aq_props:
+        aq_cols += [a, a+&#39;_err&#39;, a+&#39;_n&#39;]
+        
     group_df = self.group_df
 
     keys = list(group_df[&#39;keys&#39;])
@@ -884,8 +943,43 @@ If 'custom', you must provide a group matching csv named 'custom groups.csv'.</d
     hyd.loc[hyd_ind, &#39;group&#39;]=&#39;Yo&#39;
     hyd.loc[hyd_ind, &#39;smarts&#39;]=&#39;Yo&#39;
 
+    aq = pd.DataFrame(columns = [&#39;group&#39;]+aq_cols+[&#39;smarts&#39;,&#39;elem&#39;])
+    temp_df = pd.read_csv(save_as+&#39;_&#39;+aq_props[0]+&#39;_group_property.csv&#39;)
+    for i in temp_df.index:
+        group = temp_df.loc[i, &#39;group&#39;]
+        aq.loc[i, &#39;group&#39;] = group
+        aq.loc[i, &#39;smarts&#39;] = group
+        if group != &#39;material point&#39;:
+            aq.loc[i, &#39;elem&#39;] = self.pattern_dict[group]
+
+    remove = []
+    for p in aq_props:
+        prop_df = pd.read_csv(save_as+&#39;_&#39;+p+&#39;_group_property.csv&#39;)
+        err_df = pd.read_csv(save_as+&#39;_&#39;+p+&#39;_group_se.csv&#39;)
+        for i in prop_df.index:
+            group = prop_df.loc[i, &#39;group&#39;]
+            value = prop_df.loc[i, &#39;value&#39;]
+            if err_df.loc[i, &#39;group&#39;] != group:
+                print(&#39;err&#39;)
+            if value == 0 and i not in remove:
+                remove.append(i)
+            if value != 0:
+                err = err_df.loc[i, &#39;std err&#39;]
+                cnt = 0
+                if group != &#39;material point&#39;:
+                    cnt = group_df.loc[group_df[group]&gt;0][p].count()                        
+                aq.loc[i, p] = value
+                aq.loc[i, p+&#39;_err&#39;] = err
+                aq.loc[i, p+&#39;_n&#39;] = cnt
+    aq.drop(remove, inplace=True)
+
+    aq_ind = aq.loc[aq[&#39;group&#39;]==&#39;material point&#39;].index[0]
+    aq.loc[aq_ind, &#39;group&#39;]=&#39;Yo&#39;
+    aq.loc[aq_ind, &#39;smarts&#39;]=&#39;Yo&#39;
+
     gas.to_csv(&#39;gas props.csv&#39;, index=False)
-    hyd.to_csv(&#39;hyd props.csv&#39;, index=False)</code></pre>
+    hyd.to_csv(&#39;hyd props.csv&#39;, index=False)
+    aq.to_csv(&#39;aq props.csv&#39;, index=False)</code></pre>
 </details>
 <div class="desc"><p>Generate the group thermodynamic property databases needed to put into AqOrg's Estimate() function.</p>
 <h2 id="parameters">Parameters</h2>
@@ -900,6 +994,8 @@ This has to match the order which was used to make the properties and groups dat
 <dd>Thermodynamic properties of hydration you want to regress group data for. Must match the property columns in the input file.</dd>
 <dt><strong><code>gas_props</code></strong> :&ensp;<code>list</code> of <code>strings</code>, default <code>['Hig','Sig','Cpig']</code></dt>
 <dd>Thermodynamic properties of formation of ideal gases you want to regress group data for. Must match the property columns in the input file.</dd>
+<dt><strong><code>aq_props</code></strong> :&ensp;<code>list</code> of <code>strings</code>, default <code>['Gaq','Haq','Cpaq']</code></dt>
+<dd>Thermodynamic properties of hydration you want to regress group data for. Must match the property columns in the input file.</dd>
 </dl></div>
 </dd>
 <dt id="propfit.propfit.PropFit.group_property_estimator"><code class="name flex">
