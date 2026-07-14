@@ -30,7 +30,8 @@ class PropFit(Estimate):
         Custom file containing group information for matching.
     """
     
-    def __init__(self, filename=None, props=['Gh','Hh','Cph','V','Hig','Sig','Cpig','Gaq','Haq','Saq','Cpaq','Vaq'], group_file=None): 
+    # def __init__(self, filename=None, props=['Gh','Hh','Cph','V','Hig','Sig','Cpig','Gaq','Haq','Saq','Cpaq','Vaq'], group_file=None): 
+    def __init__(self, filename=None, props=['Gh','Hh','Cph','V','Hig','Sig','Cpig'], group_file=None): 
 
         if isinstance(filename, str):
             self.input_df = pd.read_csv(filename)
@@ -261,7 +262,8 @@ class PropFit(Estimate):
             df_group_property.to_csv(save_as+"_"+dependent_param+"_group_property.csv", index=False) #reports 0s when not able to estimate
             df_group_se.to_csv(save_as+"_"+dependent_param+"_group_se.csv", index=False)
 
-    def generate(self, filename = 'properties and groups regressed', order=2, hyd_props = ['Gh','Hh','Cph','V'], gas_props = ['Hig','Sig','Cpig'], aq_props = ['Gaq','Haq','Cpaq','V']):
+    # def generate(self, filename = 'properties and groups regressed', order=2, hyd_props = ['Gh','Hh','Cph','V'], gas_props = ['Hig','Sig','Cpig'], aq_props = ['Gaq','Haq','Cpaq','V']):
+    def generate(self, filename = 'properties and groups regressed', order=2, hyd_props=None, gas_props=None, aq_props=None):
         
         """
         Generate the group thermodynamic property databases needed to put into AqOrg's Estimate() function.
@@ -288,18 +290,6 @@ class PropFit(Estimate):
         """
         
         save_as = filename
-        
-        hyd_cols = []
-        for h in hyd_props:
-            hyd_cols += [h, h+'_err', h+'_n']
-
-        gas_cols = []
-        for g in gas_props:
-            gas_cols += [g, g+'_err', g+'_n']
-
-        aq_cols = []
-        for a in aq_props:
-            aq_cols += [a, a+'_err', a+'_n']
             
         group_df = self.group_df
     
@@ -311,128 +301,153 @@ class PropFit(Estimate):
                 pattern_dict[key] = ''
 
         self.pattern_dict = pattern_dict
+
+        if hyd_props:
+            
+            hyd_cols = []
+            for h in hyd_props:
+                hyd_cols += [h, h+'_err', h+'_n']
+                
+            hyd = pd.DataFrame(columns = ['group']+hyd_cols+['smarts','elem'])
+            temp_df = pd.read_csv(save_as+'_'+hyd_props[0]+'_group_property.csv')
+            for i in temp_df.index:
+                group = temp_df.loc[i, 'group']
+                hyd.loc[i, 'group'] = group
+                hyd.loc[i, 'smarts'] = group
+                if group != 'material point':
+                    hyd.loc[i, 'elem'] = self.pattern_dict[group]
+    
+            group_df = pd.read_csv(save_as.split(' regressed')[0]+'.csv')
+            ind = max([list(group_df.columns).index(p) for p in self.props])+1  
+            end = list(group_df.columns).index('formula')
+            groups = list(group_df.columns)[ind:end]
+    
+            remove = []
+            for p in hyd_props:
+                prop_df = pd.read_csv(save_as+'_'+p+'_group_property.csv')
+                err_df = pd.read_csv(save_as+'_'+p+'_group_se.csv')
+                for i in prop_df.index:
+                    group = prop_df.loc[i, 'group']
+                    value = prop_df.loc[i, 'value']
+                    if err_df.loc[i, 'group'] != group:
+                        print('err')
+                    if value == 0 and i not in remove:
+                        remove.append(i)
+                    if value != 0:
+                        err = err_df.loc[i, 'std err']
+                        cnt = 0
+                        if group != 'material point':
+                            cnt = group_df.loc[group_df[group]>0][p].count()                        
+                        hyd.loc[i, p] = value
+                        hyd.loc[i, p+'_err'] = err
+                        hyd.loc[i, p+'_n'] = cnt
+            hyd.drop(remove, inplace=True)
+    
+            hyd_ind = hyd.loc[hyd['group']=='material point'].index[0]
+            hyd.loc[hyd_ind, 'group']='Yo'
+            hyd.loc[hyd_ind, 'smarts']='Yo'
+    
+            hyd.to_csv('hyd props.csv', index=False)
+            print('hyd props.csv generated')
         
-        hyd = pd.DataFrame(columns = ['group']+hyd_cols+['smarts','elem'])
-        temp_df = pd.read_csv(save_as+'_'+hyd_props[0]+'_group_property.csv')
-        for i in temp_df.index:
-            group = temp_df.loc[i, 'group']
-            hyd.loc[i, 'group'] = group
-            hyd.loc[i, 'smarts'] = group
-            if group != 'material point':
-                hyd.loc[i, 'elem'] = self.pattern_dict[group]
-
-        group_df = pd.read_csv(save_as.split(' regressed')[0]+'.csv')
-        ind = max([list(group_df.columns).index(p) for p in self.props])+1  
-        end = list(group_df.columns).index('formula')
-        groups = list(group_df.columns)[ind:end]
-
-        remove = []
-        for p in hyd_props:
-            prop_df = pd.read_csv(save_as+'_'+p+'_group_property.csv')
-            err_df = pd.read_csv(save_as+'_'+p+'_group_se.csv')
-            for i in prop_df.index:
-                group = prop_df.loc[i, 'group']
-                value = prop_df.loc[i, 'value']
-                if err_df.loc[i, 'group'] != group:
-                    print('err')
-                if value == 0 and i not in remove:
-                    remove.append(i)
-                if value != 0:
-                    err = err_df.loc[i, 'std err']
-                    cnt = 0
-                    if group != 'material point':
-                        cnt = group_df.loc[group_df[group]>0][p].count()                        
-                    hyd.loc[i, p] = value
-                    hyd.loc[i, p+'_err'] = err
-                    hyd.loc[i, p+'_n'] = cnt
-        hyd.drop(remove, inplace=True)
-
-        gas = pd.DataFrame(columns = ['group']+gas_cols+['smarts','elem'])
-        temp_df = pd.read_csv(save_as+'_'+gas_props[0]+'_group_property.csv')
-        for i in temp_df.index:
-            group = temp_df.loc[i, 'group']
-            gas.loc[i, 'group'] = group
-            gas.loc[i, 'smarts'] = group
-            if group != 'material point':
-                gas.loc[i, 'elem'] = self.pattern_dict[group]
+        if gas_props:
+            
+            gas_cols = []
+            for g in gas_props:
+                gas_cols += [g, g+'_err', g+'_n']
+                
+            gas = pd.DataFrame(columns = ['group']+gas_cols+['smarts','elem'])
+            temp_df = pd.read_csv(save_as+'_'+gas_props[0]+'_group_property.csv')
+            for i in temp_df.index:
+                group = temp_df.loc[i, 'group']
+                gas.loc[i, 'group'] = group
+                gas.loc[i, 'smarts'] = group
+                if group != 'material point':
+                    gas.loc[i, 'elem'] = self.pattern_dict[group]
+        
+            remove = []
+            for p in gas_props:
+                prop_df = pd.read_csv(save_as+'_'+p+'_group_property.csv')
+                err_df = pd.read_csv(save_as+'_'+p+'_group_se.csv')
+                for i in prop_df.index:
+                    group = prop_df.loc[i, 'group']
+                    value = prop_df.loc[i, 'value']
+                    if err_df.loc[i, 'group'] != group:
+                        print('err')
+                    if value == 0 and i not in remove:
+                        remove.append(i)
+                    if value != 0:
+                        err = err_df.loc[i, 'std err']
+                        cnt = 0
+                        if group != 'material point':
+                            cnt = group_df.loc[group_df[group]>0][p].count()                        
+                        gas.loc[i, p] = value
+                        gas.loc[i, p+'_err'] = err
+                        gas.loc[i, p+'_n'] = cnt
+            gas.drop(remove, inplace=True)
+            gas.insert(1, 'Gig', np.nan)
     
-        remove = []
-        for p in gas_props:
-            prop_df = pd.read_csv(save_as+'_'+p+'_group_property.csv')
-            err_df = pd.read_csv(save_as+'_'+p+'_group_se.csv')
-            for i in prop_df.index:
-                group = prop_df.loc[i, 'group']
-                value = prop_df.loc[i, 'value']
-                if err_df.loc[i, 'group'] != group:
-                    print('err')
-                if value == 0 and i not in remove:
-                    remove.append(i)
-                if value != 0:
-                    err = err_df.loc[i, 'std err']
-                    cnt = 0
-                    if group != 'material point':
-                        cnt = group_df.loc[group_df[group]>0][p].count()                        
-                    gas.loc[i, p] = value
-                    gas.loc[i, p+'_err'] = err
-                    gas.loc[i, p+'_n'] = cnt
-        gas.drop(remove, inplace=True)
-        gas.insert(1, 'Gig', np.nan)
-
-        for i in gas.index:
-            elements = gas.loc[i, 'elem']
-            if str(elements) not in ['nan', '']:
-                reset(messages=False)
-                Selem = entropy(elements)
-                Sig = gas.loc[i, 'Sig']
-                dS = Sig - Selem
-                gas.loc[i, 'Gig'] = round((gas.loc[i, 'Hig']*1000 - 298.15*dS)/1000, 3)
-
-        gas_ind = max(gas.index)+1
-        gas.loc[gas_ind, :] = 0
-        gas.loc[gas_ind, 'group']='Yo'
-        gas.loc[gas_ind, 'smarts']='Yo'
-
-        hyd_ind = hyd.loc[hyd['group']=='material point'].index[0]
-        hyd.loc[hyd_ind, 'group']='Yo'
-        hyd.loc[hyd_ind, 'smarts']='Yo'
-
-        aq = pd.DataFrame(columns = ['group']+aq_cols+['smarts','elem'])
-        temp_df = pd.read_csv(save_as+'_'+aq_props[0]+'_group_property.csv')
-        for i in temp_df.index:
-            group = temp_df.loc[i, 'group']
-            aq.loc[i, 'group'] = group
-            aq.loc[i, 'smarts'] = group
-            if group != 'material point':
-                aq.loc[i, 'elem'] = self.pattern_dict[group]
+            for i in gas.index:
+                elements = gas.loc[i, 'elem']
+                if str(elements) not in ['nan', '']:
+                    reset(messages=False)
+                    Selem = entropy(elements)
+                    Sig = gas.loc[i, 'Sig']
+                    dS = Sig - Selem
+                    gas.loc[i, 'Gig'] = round((gas.loc[i, 'Hig']*1000 - 298.15*dS)/1000, 3)
     
-        remove = []
-        for p in aq_props:
-            prop_df = pd.read_csv(save_as+'_'+p+'_group_property.csv')
-            err_df = pd.read_csv(save_as+'_'+p+'_group_se.csv')
-            for i in prop_df.index:
-                group = prop_df.loc[i, 'group']
-                value = prop_df.loc[i, 'value']
-                if err_df.loc[i, 'group'] != group:
-                    print('err')
-                if value == 0 and i not in remove:
-                    remove.append(i)
-                if value != 0:
-                    err = err_df.loc[i, 'std err']
-                    cnt = 0
-                    if group != 'material point':
-                        cnt = group_df.loc[group_df[group]>0][p].count()                        
-                    aq.loc[i, p] = value
-                    aq.loc[i, p+'_err'] = err
-                    aq.loc[i, p+'_n'] = cnt
-        aq.drop(remove, inplace=True)
+            gas_ind = max(gas.index)+1
+            gas.loc[gas_ind, :] = 0
+            gas.loc[gas_ind, 'group']='Yo'
+            gas.loc[gas_ind, 'smarts']='Yo'
+    
+            gas.to_csv('gas props.csv', index=False)
+            print('gas props.csv generated')
+            
 
-        aq_ind = aq.loc[aq['group']=='material point'].index[0]
-        aq.loc[aq_ind, 'group']='Yo'
-        aq.loc[aq_ind, 'smarts']='Yo'
-
-        gas.to_csv('gas props.csv', index=False)
-        hyd.to_csv('hyd props.csv', index=False)
-        aq.to_csv('aq props.csv', index=False)
+        if aq_props:
+            
+            aq_cols = []
+            for a in aq_props:
+                aq_cols += [a, a+'_err', a+'_n']
+                
+            aq = pd.DataFrame(columns = ['group']+aq_cols+['smarts','elem'])
+            temp_df = pd.read_csv(save_as+'_'+aq_props[0]+'_group_property.csv')
+            for i in temp_df.index:
+                group = temp_df.loc[i, 'group']
+                aq.loc[i, 'group'] = group
+                aq.loc[i, 'smarts'] = group
+                if group != 'material point':
+                    aq.loc[i, 'elem'] = self.pattern_dict[group]
+        
+            remove = []
+            for p in aq_props:
+                prop_df = pd.read_csv(save_as+'_'+p+'_group_property.csv')
+                err_df = pd.read_csv(save_as+'_'+p+'_group_se.csv')
+                for i in prop_df.index:
+                    group = prop_df.loc[i, 'group']
+                    value = prop_df.loc[i, 'value']
+                    if err_df.loc[i, 'group'] != group:
+                        print('err')
+                    if value == 0 and i not in remove:
+                        remove.append(i)
+                    if value != 0:
+                        err = err_df.loc[i, 'std err']
+                        cnt = 0
+                        if group != 'material point':
+                            cnt = group_df.loc[group_df[group]>0][p].count()                        
+                        aq.loc[i, p] = value
+                        aq.loc[i, p+'_err'] = err
+                        aq.loc[i, p+'_n'] = cnt
+            aq.drop(remove, inplace=True)
+    
+            aq_ind = aq.loc[aq['group']=='material point'].index[0]
+            aq.loc[aq_ind, 'group']='Yo'
+            aq.loc[aq_ind, 'smarts']='Yo'
+    
+            aq.to_csv('aq props.csv', index=False)
+            print('aq props.csv generated')
+        
         
     def tts(self, repeats = 100, test_size = 0.2, filename = None, output_name = 'stats df.csv', show=True):
 
